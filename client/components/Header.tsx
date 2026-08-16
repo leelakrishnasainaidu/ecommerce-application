@@ -9,6 +9,8 @@ export default function Header({ title, showBack, showSearch, showCart, showMenu
 
     const router = useRouter()
 
+    const { itemCount } = { itemCount: 6 }
+
     return (
         <View className='bg-white flex-row items-center justify-between px-4 py-3'>
             {/* left side */}
@@ -28,16 +30,32 @@ export default function Header({ title, showBack, showSearch, showCart, showMenu
 
                 {showLogo ? (
                     <View className='flex-1'>
-                    <Image source={require("@/assets/logo.png")} style={{ width: "100%", height: 24 }} resizeMode='contain'/>
-            </View>
-            ) :(
-            <Text></Text>
+                        <Image source={require("@/assets/logo.png")} style={{ width: "100%", height: 24 }} resizeMode='contain' />
+                    </View>
+                ) : title && (
+                    <Text className='text-xl font-bold text-primary text-center flex-1 mr-8'>{title}</Text>
                 )}
-        </View>
-            {/* right side */ }
-    <View>
 
-    </View>
+
+                {(!title && !showSearch) && <View className='flex-1' />}
+            </View>
+
+            {/* right side */}
+            <View className='flex-row items-center gap-4'>
+                {showSearch && (<TouchableOpacity>
+                    <Ionicons name='search-outline' size={24} color={COLORS.primary} />
+                </TouchableOpacity>
+                )}
+                {showCart && (<TouchableOpacity onPress={() => router.push('/(tabs)/cart')}>
+                    <View className='relative'>
+                        <Ionicons name='bag-outline' size={24} color={COLORS.primary} />
+                        <View className='absolute -top-1 -right-1 bg-accent rounded-full w-4 h-4 items-center justify-center'>
+                            <Text className='text-white text-[10px] font-bold'>{itemCount}</Text>
+                        </View>
+                    </View>
+                </TouchableOpacity>
+                )}
+            </View>
         </View >
     )
 }
