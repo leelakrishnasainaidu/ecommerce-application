@@ -1,5 +1,5 @@
 import { View, Text, ScrollView, Image, Dimensions, TouchableOpacity, NativeSyntheticEvent, NativeScrollEvent, ActivityIndicator } from 'react-native'
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import Header from '@/components/Header'
 import { BANNERS, dummyProducts } from '@/assets/assets'
@@ -18,6 +18,7 @@ export default function Home() {
     const [loading, setLoading] = useState(true)
 
     const categories = [{ id: 'all', name: 'All', icon: "grid" }, ...CATEGORIES]
+
     const fetchProducts = async () => {
         setProducts(dummyProducts);
         setLoading(false)
@@ -28,10 +29,10 @@ export default function Home() {
     }, [])
 
     const handleBannerScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-        const slideWidth = width - 32
-        const offsetX = e.nativeEvent.contentOffset.x
-        const index = Math.round(offsetX / slideWidth)
-        setActiveBannerIndex(index)
+        const slide = Math.round(e.nativeEvent.contentOffset.x / e.nativeEvent.layoutMeasurement.width)
+        if (slide !== activeBannerIndex) {
+            setActiveBannerIndex(slide)
+        }
     }
 
     return (
@@ -46,12 +47,8 @@ export default function Home() {
                         pagingEnabled
                         showsHorizontalScrollIndicator={false}
                         className='w-full h-48 rounded-xl'
-                        scrollEventThrottle={16} onScroll={(e) => {
-                            const slide = Math.ceil(e.nativeEvent.contentOffset.x / e.nativeEvent.layoutMeasurement.width)
-                            if (slide !== activeBannerIndex) {
-                                setActiveBannerIndex(slide)
-                            }
-                        }}
+                        scrollEventThrottle={16}
+                        onScroll={handleBannerScroll}
                     >
                         {BANNERS.map((banner, index) => (
                             <View key={index} className='relative w-full h-48 bg-gray-200 overflow-hidden' style={{ width: width - 32 }}>
@@ -83,12 +80,17 @@ export default function Home() {
                 {/* Categories */}
                 <View className='mb-6'>
                     <View className='flex-row justify-between items-center mb-4'>
-                        <Text className='text-xl font-bold' text-primary>Categories</Text>
+                        <Text className='text-xl font-bold text-primary'>Categories</Text>
                     </View>
 
                     <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                         {categories.map((cat: any) => (
-                            <CategoryItem key={cat.id} item={cat} isSelected={false} onPress={() => router.push({ pathname: '/shop', params: { category: cat.id === 'all' ? '' : cat.name } })} />
+                            <CategoryItem
+                                key={cat.id}
+                                item={cat}
+                                isSelected={false}
+                                onPress={() => router.push({ pathname: '/shop', params: { category: cat.id === 'all' ? '' : cat.name } })}
+                            />
                         ))}
                     </ScrollView>
                 </View>
@@ -96,29 +98,30 @@ export default function Home() {
                 {/* Popular Products */}
                 <View className='mb-6'>
                     <View className='flex-row justify-between items-center mb-4'>
-                        <Text className='text-xl font-bold' text-primary>Popular</Text>
+                        <Text className='text-xl font-bold text-primary'>Popular</Text>
                         <TouchableOpacity onPress={() => router.push('/shop')}>
                             <Text className='text-secondary text-sm'>See All</Text>
                         </TouchableOpacity>
                     </View>
                     {loading ? (
                         <ActivityIndicator size='large' />
-                    ) :
-                        (
-                            <View className='flex-row flex-wrap justify-between'>
-                                {products.slice(0, 4).map((product) => (
-                                    <ProductCard key={product._id} product={product} />
-                                ))}
-                            </View>
-                        )}
+                    ) : (
+                        <View className='flex-row flex-wrap justify-between'>
+                            {products.slice(0, 4).map((product) => (
+                                <ProductCard key={product._id} product={product} />
+                            ))}
+                        </View>
+                    )}
                 </View>
 
                 {/* NewsLetter CTA  */}
                 <View className='bg-gray-100 p-6 rounded-2xl mb-20 items-center'>
-                    <Text className='text-primary font-bold text-2x1 mb-2 text-center'>
+                    <Text className='text-primary font-bold text-2xl mb-2 text-center'>
                         Join the Revolution
                     </Text>
-                    <Text className='text-secondary text-center mb-4'>Suscribe to our newsletter and get 10% off on your first purchase.</Text>
+                    <Text className='text-secondary text-center mb-4'>
+                        Subscribe to our newsletter and get 10% off on your first purchase.
+                    </Text>
                     <TouchableOpacity className='bg-primary w-4/5 py-3 rounded-full items-center'>
                         <Text className='text-white font-medium text-base'>Subscribe Now</Text>
                     </TouchableOpacity>
@@ -127,8 +130,4 @@ export default function Home() {
             </ScrollView>
         </SafeAreaView>
     )
-}
-
-function useEffect(arg0: () => void, arg1: never[]) {
-    throw new Error('Function not implemented.')
 }
