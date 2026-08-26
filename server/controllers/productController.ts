@@ -47,8 +47,14 @@ const UPDATABLE_FIELDS = ['name', 'description', 'price', 'category', 'stock', '
 // GET /api/products
 export const getProducts = async (req: Request, res: Response) => {
     try {
-        const { page = 1, limit = 10 } = req.query;
+        const { page = 1, limit = 10, category, search } = req.query;
         const query: any = { isActive: true };
+        if (category) {
+            query.category = category;
+        }
+        if (search) {
+            query.$text = { $search: String(search) };
+        }
 
         const total = await Product.countDocuments(query);
         const products = await Product.find(query).skip((Number(page) - 1) * Number(limit)).limit(Number(limit));

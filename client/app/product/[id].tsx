@@ -2,7 +2,7 @@ import { View, Text, ActivityIndicator, Image, Dimensions, TouchableOpacity } fr
 import React, { useEffect, useState } from 'react'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { Product } from '@/constants/types';
-import { dummyProducts } from '@/assets/assets';
+import { productsApi } from '@/constants/api';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS } from '@/constants';
 import { useCart } from '@/context/CartContext';
@@ -25,9 +25,18 @@ export default function ProductDetails() {
     const [activeImageIndex, setActiveImageIndex] = useState(0);
 
     const fetchProduct = async () => {
-        const found: any = dummyProducts.find((product) => product._id === id);
-        setProduct(found ?? null);
-        setLoading(false);
+        setLoading(true);
+        try {
+            const res = await productsApi.get(String(id));
+            setProduct(res.data);
+        }
+        catch (error) {
+            console.error('Failed to fetch product:', error);
+            setProduct(null);
+        }
+        finally {
+            setLoading(false);
+        }
     }
 
     useEffect(() => {
@@ -52,8 +61,8 @@ export default function ProductDetails() {
 
     const isLiked = isInWishlist(product._id);
 
-    const handleAddToCart = () => {
-        if (!selectedSize) {
+    const handleAddToCart = async () => {
+        if (product.sizes && product.sizes.length > 0 && !selectedSize) {
             Toast.show({
                 type: 'info',
                 text1: 'No Size Selected',
@@ -61,7 +70,20 @@ export default function ProductDetails() {
             })
             return;
         }
-        addToCart(product, selectedSize || "");
+        try {
+            await addToCart(product, selectedSize || "");
+            Toast.show({
+                type: 'success',
+                text1: 'Added to Cart',
+            })
+        }
+        catch (error: any) {
+            Toast.show({
+                type: 'error',
+                text1: 'Failed to Add to Cart',
+                text2: error.message,
+            })
+        }
     }
 
 

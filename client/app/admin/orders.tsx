@@ -2,9 +2,12 @@ import React, { useEffect, useState } from "react";
 import { ScrollView, Text, TouchableOpacity, View, ActivityIndicator, RefreshControl, Alert, Modal, TouchableWithoutFeedback, FlatList } from "react-native";
 import { COLORS, getStatusColor } from "@/constants";
 import { Ionicons } from "@expo/vector-icons";
-import { dummyOrders, dummyUser } from "@/assets/assets";
+import { ordersApi } from "@/constants/api";
+import { useAuth } from "@clerk/clerk-expo";
+import Toast from "react-native-toast-message";
 
 export default function AdminOrders() {
+    const { getToken } = useAuth();
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [orders, setOrders] = useState([]);
@@ -17,12 +20,18 @@ export default function AdminOrders() {
     const STATUSES = ["placed", "processing", "shipped", "delivered", "cancelled"];
 
     const fetchOrders = async () => {
-        setOrders(dummyOrders.map((order: any) => ({
-            ...order,
-            user: dummyUser
-        })) as any);
-        setLoading(false);
-        setRefreshing(false);
+        try {
+            const token = await getToken();
+            const res = await ordersApi.adminAll(token, { limit: 50 });
+            setOrders(res.data);
+        }
+        catch (error) {
+            console.error('Failed to fetch orders:', error);
+        }
+        finally {
+            setLoading(false);
+            setRefreshing(false);
+        }
     };
 
     useEffect(() => {
@@ -41,9 +50,23 @@ export default function AdminOrders() {
 
     const updateStatus = async (newStatus: string) => {
         if (!selectedOrder) return;
-        setOrders(orders.map((order: any) => order._id === selectedOrder._id ? { ...order, orderStatus: newStatus } : order) as any);
-        setStatusModalVisible(false);
-        setUpdating(false);
+        setUpdating(true);
+        try {
+            const token = await getToken();
+            await ordersApi.updateStatus(token, selectedOrder._id, newStatus);
+            setOrders(orders.map((order: any) => order._id === selectedOrder._id ? { ...order, orderStatus: newStatus } : order) as any);
+            setStatusModalVisible(false);
+        }
+        catch (error: any) {
+            Toast.show({
+                type: 'error',
+                text1: 'Failed to Update Status',
+                text2: error.message,
+            });
+        }
+        finally {
+            setUpdating(false);
+        }
     };
 
     if (loading && !refreshing) {

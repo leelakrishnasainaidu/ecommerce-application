@@ -1,17 +1,23 @@
 import React, { useEffect, useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Product } from '@/constants/types';
-import { dummyProducts } from '@/assets/assets';
 import Header from '@/components/Header';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '@/constants';
 import { FlatList, TextInput } from 'react-native-gesture-handler';
 import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
 import ProductCard from '@/components/ProductCard';
+import { productsApi } from '@/constants/api';
+import { useLocalSearchParams } from 'expo-router';
+
+const PAGE_SIZE = 10;
 
 export default function Shop() {
 
+    const { category } = useLocalSearchParams<{ category?: string }>();
+
     const [products, setProducts] = useState<Product[]>([]);
+    const [search, setSearch] = useState('');
     const [loading, setLoading] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
     const [page, setPage] = useState(1);
@@ -26,19 +32,17 @@ export default function Shop() {
             setLoadingMore(true);
         }
         try {
-            const start = (pageNumber - 1) * 10;
-            const end = start + 10;
-            const paginatedData = dummyProducts.slice(start, end);
+            const res = await productsApi.list({ page: pageNumber, limit: PAGE_SIZE, category, search: search || undefined });
             if (pageNumber === 1) {
-                setProducts(paginatedData);
+                setProducts(res.data);
             }
             else {
-                setProducts(prev => [...prev, ...paginatedData]);
+                setProducts(prev => [...prev, ...res.data]);
             }
-            setHasMore(end < dummyProducts.length);
+            setHasMore(res.pagination.page < res.pagination.pages);
             setPage(pageNumber);
         } catch (error) {
-            console.error('Pagination error:', error);
+            console.error('Failed to fetch products:', error);
         }
         finally {
             setLoading(false);
@@ -54,7 +58,11 @@ export default function Shop() {
 
     useEffect(() => {
         fetchProducts(1);
-    }, [])
+    }, [category])
+
+    const handleSearchSubmit = () => {
+        fetchProducts(1);
+    }
 
     return (
         <SafeAreaView className="flex-1 bg-surface" edges={['top']}>
@@ -63,7 +71,15 @@ export default function Shop() {
                 {/* Search bar */}
                 <View className='bg-white flex-row items-center border border-gray-100 rounded-xl flex-1'>
                     <Ionicons name='search' className="ml-4" size={20} color={COLORS.secondary} />
-                    <TextInput className='flex-1 ml-2 text-primary px-4 py-3' placeholder='Search products...' returnKeyType='search' placeholderTextColor={COLORS.secondary} />
+                    <TextInput
+                        className='flex-1 ml-2 text-primary px-4 py-3'
+                        placeholder='Search products...'
+                        returnKeyType='search'
+                        placeholderTextColor={COLORS.secondary}
+                        value={search}
+                        onChangeText={setSearch}
+                        onSubmitEditing={handleSearchSubmit}
+                    />
                 </View>
 
                 {/* Filter icon */}

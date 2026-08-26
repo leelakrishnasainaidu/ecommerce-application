@@ -3,7 +3,8 @@ import React, { useEffect, useState } from 'react'
 import { useCart } from '@/context/CartContext'
 import { useRouter } from 'expo-router'
 import { Address } from '@/constants/types'
-import { dummyAddress } from '@/assets/assets'
+import { addressesApi, ordersApi } from '@/constants/api'
+import { useAuth } from '@clerk/clerk-expo'
 import { Toast } from 'react-native-toast-message/lib/src/Toast'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { COLORS } from '@/constants'
@@ -13,7 +14,8 @@ import { Ionicons } from '@expo/vector-icons'
 
 export default function Checkout() {
 
-    const { cartTotal } = useCart()
+    const { cartTotal, clearCart } = useCart()
+    const { getToken } = useAuth()
     const router = useRouter()
 
     const [loading, setLoading] = useState(false)
@@ -27,13 +29,22 @@ export default function Checkout() {
     const total = cartTotal + shipping + tax;
 
     const fetchAddresses = async () => {
-        const addrList = dummyAddress;
-        if (addrList.length > 0) {
-            // Find default or first address
-            const def = addrList.find((a: any) => a.isDefault) || addrList[0];
-            setSelectedAddress(def as Address);
+        try {
+            const token = await getToken();
+            const res = await addressesApi.list(token);
+            const addrList: Address[] = res.data;
+            if (addrList.length > 0) {
+                // Find default or first address
+                const def = addrList.find((a) => a.isDefault) || addrList[0];
+                setSelectedAddress(def);
+            }
         }
-        setPageLoading(false);
+        catch (error) {
+            console.error('Failed to fetch addresses:', error);
+        }
+        finally {
+            setPageLoading(false);
+        }
     }
 
     const handlePlaceOrder = async () => {
@@ -53,8 +64,27 @@ export default function Checkout() {
             })
 
         }
-        // Cash on delivery
-        router.replace('/orders')
+        setLoading(true);
+        try {
+            const { street, city, state, zipCode, country } = selectedAddress;
+            const token = await getToken();
+            await ordersApi.create(token, {
+                shippingAddress: { street, city, state, zipCode, country },
+                paymentMethod,
+            });
+            await clearCart();
+            router.replace('/orders')
+        }
+        catch (error: any) {
+            Toast.show({
+                type: 'error',
+                text1: 'Failed to Place Order',
+                text2: error.message
+            })
+        }
+        finally {
+            setLoading(false);
+        }
     }
 
     useEffect(() => {

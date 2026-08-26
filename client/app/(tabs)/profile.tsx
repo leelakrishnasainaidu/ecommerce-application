@@ -1,6 +1,5 @@
 import { View, Text, ScrollView, TouchableOpacity, Image } from 'react-native'
 import React from 'react'
-import { dummyUser } from '@/assets/assets'
 import { useRouter } from 'expo-router'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import Header from '@/components/Header'

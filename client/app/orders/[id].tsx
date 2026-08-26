@@ -6,16 +6,29 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import Header from "@/components/Header";
 import { COLORS } from "@/constants";
 import type { Order, Product } from "@/constants/types";
-import { dummyOrders } from "@/assets/assets";
+import { ordersApi } from "@/constants/api";
+import { useAuth } from "@clerk/clerk-expo";
 
 export default function OrderDetails() {
     const { id } = useLocalSearchParams();
+    const { getToken } = useAuth();
     const [order, setOrder] = useState<Order | null>(null);
     const [loading, setLoading] = useState(true);
 
     const fetchOrderDetails = async () => {
-        setOrder(dummyOrders.find((order) => order._id === id) as any);
-        setLoading(false);
+        setLoading(true);
+        try {
+            const token = await getToken();
+            const res = await ordersApi.get(token, String(id));
+            setOrder(res.data);
+        }
+        catch (error) {
+            console.error('Failed to fetch order:', error);
+            setOrder(null);
+        }
+        finally {
+            setLoading(false);
+        }
     };
 
     useEffect(() => {

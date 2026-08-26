@@ -1,19 +1,13 @@
-import { createContext, ReactNode, useContext, useState, useEffect } from "react";
+import { createContext, ReactNode, useContext, useState } from "react";
 import { Product, WishlistContextType } from "@/constants/types";
-import { dummyWishlist } from "@/assets/assets";
 
 const WishListContext = createContext<WishlistContextType | undefined>(undefined);
 
+// No wishlist endpoint exists on the server yet, so this stays local-only for now
 export function WishlistProvider({ children }: { children: ReactNode }) {
 
     const [wishlist, setWishlist] = useState<Product[]>([]);
-    const [loading, setLoading] = useState(false);
-
-    const fetchWishlist = async () => {
-        setLoading(true);
-        setWishlist(dummyWishlist);
-        setLoading(false);
-    }
+    const [loading] = useState(false);
 
     const toggleWishlist = async (product: Product) => {
         setWishlist((prev) => {
@@ -28,10 +22,6 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
     const isInWishlist = (productId: string) => {
         return wishlist.some((p) => p._id === productId);
     }
-
-    useEffect(() => {
-        fetchWishlist();
-    }, []);
 
     return (
         <WishListContext.Provider value={{ wishlist, loading, isInWishlist, toggleWishlist }}>
