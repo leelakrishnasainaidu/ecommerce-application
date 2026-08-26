@@ -5,11 +5,13 @@ import Toast from 'react-native-toast-message';
 import { COLORS, CATEGORIES } from "@/constants";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
-import { dummyProducts } from "@/assets/assets";
+import { productsApi } from "@/constants/api";
+import { useAuth } from "@clerk/clerk-expo";
 
 export default function EditProduct() {
     const { id } = useLocalSearchParams();
     const router = useRouter();
+    const { getToken } = useAuth();
 
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
@@ -31,7 +33,8 @@ export default function EditProduct() {
     useEffect(() => {
         const fetchProduct = async () => {
             try {
-                const product: any = dummyProducts.find((p) => p._id === id);
+                const res = await productsApi.get(String(id));
+                const product: any = res.data;
                 setName(product.name);
                 setDescription(product.description || "");
                 setPrice(product.price.toString());
@@ -51,7 +54,7 @@ export default function EditProduct() {
                 Toast.show({
                     type: 'error',
                     text1: 'Failed to Fetch Product',
-                    text2: error.response?.data?.message || "Something went wrong"
+                    text2: error.message || "Something went wrong"
                 });
                 router.back();
             } finally {
@@ -125,13 +128,21 @@ export default function EditProduct() {
                     formData.append("images", { uri, name: filename, type: "image/jpeg" } as any);
                 }
             }
+
+            const token = await getToken();
+            await productsApi.update(token, String(id), formData);
+
+            Toast.show({
+                type: 'success',
+                text1: 'Product Updated',
+            });
             router.back();
         } catch (error: any) {
             console.error("Failed to update product:", error);
             Toast.show({
                 type: 'error',
                 text1: 'Failed to Update Product',
-                text2: error.response?.data?.message || "Something went wrong"
+                text2: error.message || "Something went wrong"
             });
         } finally {
             setSubmitting(false);

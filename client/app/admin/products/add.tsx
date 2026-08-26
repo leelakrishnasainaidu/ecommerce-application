@@ -5,9 +5,14 @@ import { COLORS } from "@/constants";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { CATEGORIES } from "@/constants";
+import { productsApi } from "@/constants/api";
+import { useAuth } from "@clerk/clerk-expo";
+import { useRouter } from "expo-router";
 
 export default function AddProduct() {
 
+    const { getToken } = useAuth();
+    const router = useRouter();
     const [submitting, setSubmitting] = useState(false);
     const [modalVisible, setModalVisible] = useState(false);
 
@@ -38,13 +43,55 @@ export default function AddProduct() {
 
     // Add Product
     const handleSubmit = async () => {
-        if (!name || !price || !category || sizes.length < 1) {
+        if (!name || !price || !category || images.length < 1) {
             Toast.show({
                 type: 'error',
                 text1: 'Missing Fields',
-                text2: 'Please fill in all required fields'
+                text2: 'Please fill in all required fields and upload at least one image'
             });
             return;
+        }
+
+        try {
+            setSubmitting(true);
+            const formData = new FormData();
+            formData.append("name", name);
+            formData.append("description", description);
+            formData.append("price", price);
+            formData.append("stock", stock);
+            formData.append("category", category);
+            formData.append("isFeatured", String(isFeatured));
+            formData.append("sizes", sizes);
+
+            for (const [i, uri] of images.entries()) {
+                const filename = `image-${i}.jpg`;
+                if (Platform.OS === "web") {
+                    const blob = await (await fetch(uri)).blob();
+                    formData.append("images", new File([blob], filename, { type: "image/jpeg" }));
+                } else {
+                    formData.append("images", { uri, name: filename, type: "image/jpeg" } as any);
+                }
+            }
+
+            const token = await getToken();
+            await productsApi.create(token, formData);
+
+            Toast.show({
+                type: 'success',
+                text1: 'Product Created',
+            });
+            router.back();
+        }
+        catch (error: any) {
+            console.error("Failed to create product:", error);
+            Toast.show({
+                type: 'error',
+                text1: 'Failed to Create Product',
+                text2: error.message || "Something went wrong"
+            });
+        }
+        finally {
+            setSubmitting(false);
         }
     };
 

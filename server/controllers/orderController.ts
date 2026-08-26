@@ -3,10 +3,10 @@ import Order from '../models/Order.js';
 import Cart from '../models/Cart.js';
 import Product from '../models/Products.js';
 
-// Placeholder business rules — no shipping/tax provider is wired up yet
-const SHIPPING_COST = 50;
-const FREE_SHIPPING_THRESHOLD = 999;
-const TAX_RATE = 0.05;
+// Matches the flat shipping/no-tax figures shown in the client's cart and checkout screens
+const SHIPPING_COST = 2;
+const FREE_SHIPPING_THRESHOLD = Infinity;
+const TAX_RATE = 0;
 
 const CANCELLABLE_STATUSES = ['placed', 'processing'];
 const VALID_ORDER_STATUSES = ['placed', 'processing', 'shipped', 'delivered', 'cancelled'];
@@ -83,6 +83,7 @@ export const getMyOrders = async (req: Request, res: Response) => {
 
         const total = await Order.countDocuments(query);
         const orders = await Order.find(query)
+            .populate('items.product', 'name images')
             .sort({ createdAt: -1 })
             .skip((Number(page) - 1) * Number(limit))
             .limit(Number(limit));

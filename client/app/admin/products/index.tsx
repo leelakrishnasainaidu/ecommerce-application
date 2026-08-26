@@ -3,18 +3,29 @@ import React, { useEffect, useState } from "react";
 import { ScrollView, Text, TouchableOpacity, View, ActivityIndicator, RefreshControl, Image, Alert } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS } from "@/constants";
-import { dummyProducts } from "@/assets/assets";
+import { productsApi } from "@/constants/api";
+import { useAuth } from "@clerk/clerk-expo";
+import Toast from "react-native-toast-message";
 
 export default function AdminProducts() {
     const router = useRouter();
+    const { getToken } = useAuth();
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [products, setProducts] = useState([]);
 
     const fetchProducts = async () => {
-        setProducts(dummyProducts as any);
-        setLoading(false);
-        setRefreshing(false);
+        try {
+            const res = await productsApi.list({ limit: 100 });
+            setProducts(res.data);
+        }
+        catch (error) {
+            console.error('Failed to fetch products:', error);
+        }
+        finally {
+            setLoading(false);
+            setRefreshing(false);
+        }
     };
 
     useEffect(() => {
@@ -27,7 +38,18 @@ export default function AdminProducts() {
     };
 
     const performDelete = async (id: string) => {
-        setProducts(products.filter((product: any) => product._id !== id) as any);
+        try {
+            const token = await getToken();
+            await productsApi.remove(token, id);
+            setProducts(products.filter((product: any) => product._id !== id) as any);
+        }
+        catch (error: any) {
+            Toast.show({
+                type: 'error',
+                text1: 'Failed to Delete Product',
+                text2: error.message,
+            });
+        }
     };
 
     const deleteProduct = async (id: string) => {

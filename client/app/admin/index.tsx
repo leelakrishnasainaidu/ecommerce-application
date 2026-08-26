@@ -2,10 +2,12 @@ import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { ScrollView, Text, View, ActivityIndicator, RefreshControl } from "react-native";
 import { COLORS, getStatusColor } from "@/constants";
-import { dummyAdminStats } from "@/assets/assets";
+import { adminApi } from "@/constants/api";
+import { useAuth } from "@clerk/clerk-expo";
 
 export default function AdminDashboard() {
     const router = useRouter();
+    const { getToken } = useAuth();
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [stats, setStats] = useState({
@@ -17,9 +19,18 @@ export default function AdminDashboard() {
     });
 
     const fetchStats = async () => {
-        setStats(dummyAdminStats as any);
-        setLoading(false);
-        setRefreshing(false);
+        try {
+            const token = await getToken();
+            const res = await adminApi.dashboard(token);
+            setStats(res.data);
+        }
+        catch (error) {
+            console.error('Failed to fetch dashboard stats:', error);
+        }
+        finally {
+            setLoading(false);
+            setRefreshing(false);
+        }
     };
 
     useEffect(() => {

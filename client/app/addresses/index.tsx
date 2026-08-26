@@ -5,9 +5,12 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import Header from "@/components/Header";
 import { COLORS } from "@/constants";
 import type { Address } from "@/constants/types";
-import { dummyAddress } from "@/assets/assets";
+import { addressesApi } from "@/constants/api";
+import { useAuth } from "@clerk/clerk-expo";
+import Toast from "react-native-toast-message";
 
 export default function Addresses() {
+    const { getToken } = useAuth();
     const [addresses, setAddresses] = useState<Address[]>([]);
     const [loading, setLoading] = useState(true);
     const [modalVisible, setModalVisible] = useState(false);
@@ -31,8 +34,18 @@ export default function Addresses() {
     }, []);
 
     const fetchAddresses = async () => {
-        setAddresses(dummyAddress as any);
-        setLoading(false);
+        setLoading(true);
+        try {
+            const token = await getToken();
+            const res = await addressesApi.list(token);
+            setAddresses(res.data);
+        }
+        catch (error) {
+            console.error('Failed to fetch addresses:', error);
+        }
+        finally {
+            setLoading(false);
+        }
     };
 
     const handleEditSearch = (item: Address) => {
@@ -49,13 +62,53 @@ export default function Addresses() {
     };
 
     const handleSaveAddress = async () => {
-        setModalVisible(false);
-        resetForm();
-        fetchAddresses();
+        if (!street || !city || !state || !zipCode || !country) {
+            Toast.show({
+                type: 'error',
+                text1: 'Missing Fields',
+                text2: 'Please fill in all address fields',
+            });
+            return;
+        }
+        setSubmitting(true);
+        try {
+            const token = await getToken();
+            const body = { type, street, city, state, zipCode, country, isDefault };
+            if (isEditing && editingId) {
+                await addressesApi.update(token, editingId, body);
+            }
+            else {
+                await addressesApi.create(token, body);
+            }
+            setModalVisible(false);
+            resetForm();
+            fetchAddresses();
+        }
+        catch (error: any) {
+            Toast.show({
+                type: 'error',
+                text1: 'Failed to Save Address',
+                text2: error.message,
+            });
+        }
+        finally {
+            setSubmitting(false);
+        }
     };
 
     const handleDeleteAddress = async (id: string) => {
-
+        try {
+            const token = await getToken();
+            await addressesApi.remove(token, id);
+            fetchAddresses();
+        }
+        catch (error: any) {
+            Toast.show({
+                type: 'error',
+                text1: 'Failed to Delete Address',
+                text2: error.message,
+            });
+        }
     };
 
     const resetForm = () => {
